@@ -41,12 +41,10 @@
  */
 const express = require("express");
 const bodyParser = require("body-parser");
-
+const fs = require("fs");
 const app = express();
 
 app.use(bodyParser.json());
-
-let todos = [];
 
 const create_todo_object = (request_body, id) => {
   return {
@@ -58,37 +56,68 @@ const create_todo_object = (request_body, id) => {
 };
 
 app.get("/todos", (req, res) => {
-  res.status(200).json(todos);
+  fs.readFile("todos.json", "utf8", (err, data) => {
+    if (err) throw err;
+    let todos = JSON.parse(data);
+    res.status(200).json(todos);
+  });
 });
 app.get("/todos/:id", (req, res) => {
-  let required_todo = todos.find((todo) => todo.id === parseInt(req.params.id));
-  if (required_todo) return res.status(200).json(required_todo);
-  return res.status(404).send("404 Not Found");
+  fs.readFile("todos.json", "utf8", (err, data) => {
+    if (err) throw err;
+    let todos = JSON.parse(data);
+    let required_todo = todos.find(
+      (todo) => todo.id === parseInt(req.params.id)
+    );
+    if (required_todo) return res.status(200).json(required_todo);
+    return res.status(404).send("404 Not Found");
+  });
 });
 app.post("/todos", (req, res) => {
-  todo_id = Math.floor(Math.random() * 10000);
-  let todo_to_save = create_todo_object(req.body, todo_id);
-  todos.push(todo_to_save);
-  return res.status(201).json({ id: todo_to_save["id"] });
+  fs.readFile("todos.json", "utf8", (err, data) => {
+    if (err) throw err;
+    let todos = JSON.parse(data);
+    todo_id = Math.floor(Math.random() * 10000);
+    let todo_to_save = create_todo_object(req.body, todo_id);
+    todos.push(todo_to_save);
+    fs.writeFile("todos.json", JSON.stringify(todos), (err) => {
+      if (err) throw err;
+      return res.status(201).json({ id: todo_to_save["id"] });
+    });
+  });
 });
 app.put("/todos/:id", (req, res) => {
-  let id_to_find = parseInt(req.params.id);
-  let index_to_update = todos.findIndex((todo) => todo.id === id_to_find);
-  if (index_to_update !== -1) {
-    new_todo = create_todo_object(req.body, id_to_find);
-    todos[index_to_update] = new_todo;
-    return res.status(200).send();
-  }
-  res.status(404).send();
+  fs.readFile("todos.json", "utf8", (err, data) => {
+    if (err) throw err;
+    let todos = JSON.parse(data);
+    let id_to_find = parseInt(req.params.id);
+    let index_to_update = todos.findIndex((todo) => todo.id === id_to_find);
+    if (index_to_update !== -1) {
+      new_todo = create_todo_object(req.body, id_to_find);
+      todos[index_to_update] = new_todo;
+      fs.writeFile("todos.json", JSON.stringify(todos), (err) => {
+        if (err) throw err;
+        return res.status(200).send();
+      });
+    }
+    res.status(404).send();
+  });
 });
 app.delete("/todos/:id", (req, res) => {
-  let id_to_find = parseInt(req.params.id);
-  let required_todo = todos.findIndex((todo) => todo.id === id_to_find);
-  if (required_todo !== -1) {
-    todos.splice(required_todo);
-    return res.status(200).send();
-  }
-  return res.status(404).send("404 Not Found");
+  fs.readFile("todos.json", "utf8", (err, data) => {
+    if (err) throw err;
+    let todos = JSON.parse(data);
+    let id_to_find = parseInt(req.params.id);
+    let required_todo = todos.findIndex((todo) => todo.id === id_to_find);
+    if (required_todo !== -1) {
+      todos.splice(required_todo);
+      fs.writeFile("todos.json", JSON.stringify(todos), (err) => {
+        if (err) throw err;
+        return res.status(200).send();
+      });
+    }
+    return res.status(404).send("404 Not Found");
+  });
 });
 app.use("*", () => {
   res.status(404).send();
